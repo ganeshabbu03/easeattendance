@@ -41,6 +41,7 @@ const managerMenuItems = [
   { title: "All Employees", url: "/manager/employees", icon: Users },
   { title: "Team Calendar", url: "/manager/calendar", icon: Calendar },
   { title: "Reports", url: "/manager/reports", icon: FileText },
+  { title: "Profile", url: "/profile", icon: User },
 ];
 
 export function AppSidebar() {

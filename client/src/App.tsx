@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { ThemeProvider } from "@/lib/theme";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ProfilePopover } from "@/components/profile-popover";
 import { AppSidebar } from "@/components/app-sidebar";
 import NotFound from "@/pages/not-found";
 import LoginPage from "@/pages/login";
@@ -68,7 +69,10 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col flex-1 min-w-0">
           <header className="sticky top-0 z-50 flex items-center justify-between gap-4 px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <SidebarTrigger data-testid="button-sidebar-toggle" className="-ml-1" />
-            <ThemeToggle />
+            <div className="flex items-center gap-2">
+              <ProfilePopover />
+              <ThemeToggle />
+            </div>
           </header>
           <main className="flex-1 p-6 overflow-auto">
             {children}
