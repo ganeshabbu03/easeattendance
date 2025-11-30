@@ -9,7 +9,7 @@ const User = mongoose.model("User", userSchema);
 (async () => {
     try {
         await mongoose.connect("mongodb://localhost:27017/animated-attendance");
-        const user = await User.findOne({ email: "test4@mongo.com" });
+        const user = await User.findOne({ email: "sarah@company.com" });
         if (user) {
             console.log("User found:", user);
         } else {

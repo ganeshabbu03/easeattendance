@@ -25,7 +25,7 @@ export async function registerRoutes(
   app.post("/api/auth/register", async (req, res) => {
     try {
       const validatedData = registerSchema.parse(req.body);
-      
+
       const existingUser = await storage.getUserByEmail(validatedData.email);
       if (existingUser) {
         return res.status(400).json({ message: "Email already registered" });
@@ -50,7 +50,7 @@ export async function registerRoutes(
   app.post("/api/auth/login", async (req, res) => {
     try {
       const validatedData = loginSchema.parse(req.body);
-      
+
       const user = await storage.getUserByEmail(validatedData.email);
       if (!user) {
         return res.status(401).json({ message: "Invalid email or password" });
@@ -158,7 +158,7 @@ export async function registerRoutes(
       const now = new Date();
       const checkInTime = new Date(existingAttendance.checkInTime);
       const hoursWorked = Math.round((now.getTime() - checkInTime.getTime()) / (1000 * 60 * 60));
-      
+
       let status = existingAttendance.status;
       if (hoursWorked < 4) {
         status = "half-day";
@@ -268,13 +268,13 @@ export async function registerRoutes(
   app.get("/api/attendance/export", async (req, res) => {
     try {
       const { from, to, employeeId } = req.query;
-      
+
       const fromDate = from ? new Date(from as string) : startOfMonth(new Date());
       const toDate = to ? new Date(to as string) : endOfMonth(new Date());
-      
+
       const attendance = await storage.getAttendanceByDateRange(
-        fromDate, 
-        toDate, 
+        fromDate,
+        toDate,
         employeeId as string | undefined
       );
 
@@ -309,7 +309,7 @@ export async function registerRoutes(
 
       const todayStatus = await storage.getAttendanceByUserAndDate(userId, today);
       const allAttendance = await storage.getAttendanceByUser(userId);
-      
+
       const monthlyAttendance = allAttendance.filter(a => {
         const date = new Date(a.date);
         return date >= monthStart && date <= monthEnd;
@@ -340,11 +340,11 @@ export async function registerRoutes(
       const allUsers = await storage.getAllUsers();
       const employees = allUsers.filter(u => u.role === "employee");
       const today = format(new Date(), "yyyy-MM-dd");
-      
+
       const todayAttendance = await storage.getTodayAttendance();
-      
+
       const presentToday = todayAttendance.filter(a => a.status === "present" || a.status === "late");
-      const absentToday = employees.filter(emp => 
+      const absentToday = employees.filter(emp =>
         !todayAttendance.find(a => a.userId === emp.id)
       );
       const lateToday = todayAttendance.filter(a => a.status === "late");
@@ -358,9 +358,9 @@ export async function registerRoutes(
         const dayDate = new Date(weekStart);
         dayDate.setDate(weekStart.getDate() + index);
         const dayStr = format(dayDate, "yyyy-MM-dd");
-        
+
         const dayAttendance = weeklyAttendance.filter(a => a.date === dayStr);
-        
+
         return {
           day,
           present: dayAttendance.filter(a => a.status === "present").length,
@@ -372,10 +372,10 @@ export async function registerRoutes(
       const departments = [...new Set(employees.map(e => e.department))];
       const departmentStats = departments.map(dept => {
         const deptEmployees = employees.filter(e => e.department === dept);
-        const deptTodayAttendance = todayAttendance.filter(a => 
+        const deptTodayAttendance = todayAttendance.filter(a =>
           deptEmployees.find(e => e.id === a.userId)
         );
-        
+
         return {
           department: dept,
           present: deptTodayAttendance.filter(a => a.status === "present" || a.status === "late").length,
