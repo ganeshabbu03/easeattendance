@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Attendance, type InsertAttendance, type AttendanceWithUser, type AttendanceStatus } from "@shared/schema";
+import { type User, type InsertUser, type Attendance, type InsertAttendance, type AttendanceWithUser, type AttendanceStatus } from "../shared/schema.js";
 import { randomUUID } from "crypto";
 import { format } from "date-fns";
 import mongoose, { Schema, Document } from "mongoose";

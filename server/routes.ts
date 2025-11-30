@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
-import { registerSchema, loginSchema } from "@shared/schema";
+import { registerSchema, loginSchema } from "../shared/schema.js";
 import { z } from "zod";
 import { format, startOfMonth, endOfMonth, subDays, startOfWeek, endOfWeek } from "date-fns";
 import bcrypt from "bcrypt";
