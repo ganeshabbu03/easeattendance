@@ -59,7 +59,18 @@ app.use((req, res, next) => {
   next();
 });
 
+import mongoose from "mongoose";
+
 (async () => {
+  try {
+    const mongoUri = process.env.MONGODB_URI || "mongodb://localhost:27017/animated-attendance";
+    await mongoose.connect(mongoUri);
+    log(`Connected to MongoDB at ${mongoUri}`);
+  } catch (err) {
+    console.error("Failed to connect to MongoDB:", err);
+    process.exit(1);
+  }
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -89,7 +100,6 @@ app.use((req, res, next) => {
     {
       port,
       host: "0.0.0.0",
-      reusePort: true,
     },
     () => {
       log(`serving on port ${port}`);

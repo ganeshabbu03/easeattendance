@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -39,7 +39,7 @@ const departments = [
 
 export default function RegisterPage() {
   const [, setLocation] = useLocation();
-  const { login } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   const { toast } = useToast();
   const [isHovered, setIsHovered] = useState(false);
 
@@ -54,6 +54,18 @@ export default function RegisterPage() {
     },
   });
 
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.role === "manager") {
+        setLocation("/manager/dashboard");
+      } else {
+        setLocation("/dashboard");
+      }
+    }
+  }, [isAuthenticated, user, setLocation]);
+
+
+
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterFormValues) => {
       const response = await apiRequest("POST", "/api/auth/register", data);
@@ -65,11 +77,6 @@ export default function RegisterPage() {
         title: "Account created!",
         description: "Welcome to AttendEase. You're all set to start tracking attendance.",
       });
-      if (data.user.role === "manager") {
-        setLocation("/manager/dashboard");
-      } else {
-        setLocation("/dashboard");
-      }
     },
     onError: (error: any) => {
       toast({
@@ -85,10 +92,10 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex" >
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRoLTJ2LTRoMnY0em0wLTZ2LTRoLTJ2NGgyek0zNiAyNGgtMnYtNGgydjR6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30" />
-        
+
         <div className="relative z-10 flex flex-col justify-center px-12 text-white">
           <div className="flex items-center gap-4 mb-8">
             <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
@@ -105,7 +112,7 @@ export default function RegisterPage() {
               Join thousands of teams managing attendance
             </h2>
             <p className="text-lg text-white/80 leading-relaxed">
-              Create your account and experience seamless attendance tracking. 
+              Create your account and experience seamless attendance tracking.
               Whether you're an employee or manager, we've got you covered.
             </p>
 
@@ -331,6 +338,6 @@ export default function RegisterPage() {
           </Card>
         </div>
       </div>
-    </div>
+    </div >
   );
 }

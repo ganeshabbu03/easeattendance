@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,9 +23,19 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const [, setLocation] = useLocation();
-  const { login } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   const { toast } = useToast();
   const [isHovered, setIsHovered] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.role === "manager") {
+        setLocation("/manager/dashboard");
+      } else {
+        setLocation("/dashboard");
+      }
+    }
+  }, [isAuthenticated, user, setLocation]);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -46,11 +56,6 @@ export default function LoginPage() {
         title: "Welcome back!",
         description: "You have been successfully logged in.",
       });
-      if (data.user.role === "manager") {
-        setLocation("/manager/dashboard");
-      } else {
-        setLocation("/dashboard");
-      }
     },
     onError: (error: any) => {
       toast({
@@ -69,7 +74,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex">
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary via-primary/90 to-primary/80 relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRoLTJ2LTRoMnY0em0wLTZ2LTRoLTJ2NGgyek0zNiAyNGgtMnYtNGgydjR6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30" />
-        
+
         <div className="relative z-10 flex flex-col justify-center px-12 text-white">
           <div className="flex items-center gap-4 mb-8">
             <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
@@ -86,7 +91,7 @@ export default function LoginPage() {
               Track attendance with ease and efficiency
             </h2>
             <p className="text-lg text-white/80 leading-relaxed">
-              Streamline your workforce management with our intuitive attendance tracking solution. 
+              Streamline your workforce management with our intuitive attendance tracking solution.
               Check in, monitor progress, and generate reports effortlessly.
             </p>
 

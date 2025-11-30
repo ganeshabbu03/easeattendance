@@ -1,6 +1,7 @@
 import { type User, type InsertUser, type Attendance, type InsertAttendance, type AttendanceWithUser, type AttendanceStatus } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { format, startOfMonth, endOfMonth, subDays } from "date-fns";
+import { format } from "date-fns";
+import mongoose, { Schema, Document } from "mongoose";
 import bcrypt from "bcrypt";
 
 export interface IStorage {
@@ -10,7 +11,7 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   getEmployees(): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
-  
+
   getAttendance(id: string): Promise<Attendance | undefined>;
   getAttendanceByUserAndDate(userId: string, date: string): Promise<Attendance | undefined>;
   getAttendanceByUser(userId: string): Promise<Attendance[]>;
@@ -26,283 +27,176 @@ function generateEmployeeId(): string {
   return `EMP${num}`;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-  private attendance: Map<string, Attendance>;
-  private employeeIdCounter: number = 1;
+// Mongoose Schemas
+const userSchema = new Schema<User>({
+  id: { type: String, required: true, unique: true },
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  role: { type: String, required: true, enum: ["employee", "manager"] },
+  employeeId: { type: String, required: true, unique: true },
+  department: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now },
+});
 
+const attendanceSchema = new Schema<Attendance>({
+  id: { type: String, required: true, unique: true },
+  userId: { type: String, required: true, ref: 'User' },
+  date: { type: String, required: true },
+  checkInTime: { type: Date },
+  checkOutTime: { type: Date },
+  status: { type: String, required: true },
+  totalHours: { type: Number, default: 0 },
+  createdAt: { type: Date, default: Date.now },
+});
+
+const UserModel = mongoose.model<User>('User', userSchema);
+const AttendanceModel = mongoose.model<Attendance>('Attendance', attendanceSchema);
+
+export class MongoStorage implements IStorage {
   constructor() {
-    this.users = new Map();
-    this.attendance = new Map();
-    this.initializeAsync();
-  }
-
-  private async initializeAsync() {
-    await this.seedData();
-  }
-
-  private async seedData() {
-    const hashedPassword = await bcrypt.hash("password123", 10);
-    const departments = ["Engineering", "Product", "Design", "Marketing", "Sales", "Human Resources"];
-    
-    const manager: User = {
-      id: randomUUID(),
-      name: "Sarah Johnson",
-      email: "sarah@company.com",
-      password: hashedPassword,
-      role: "manager",
-      employeeId: "EMP001",
-      department: "Human Resources",
-      createdAt: new Date("2024-01-01"),
-    };
-    this.users.set(manager.id, manager);
-
-    const employees: User[] = [
-      {
-        id: randomUUID(),
-        name: "John Doe",
-        email: "john@company.com",
-        password: hashedPassword,
-        role: "employee",
-        employeeId: "EMP002",
-        department: "Engineering",
-        createdAt: new Date("2024-01-15"),
-      },
-      {
-        id: randomUUID(),
-        name: "Jane Smith",
-        email: "jane@company.com",
-        password: hashedPassword,
-        role: "employee",
-        employeeId: "EMP003",
-        department: "Product",
-        createdAt: new Date("2024-02-01"),
-      },
-      {
-        id: randomUUID(),
-        name: "Mike Wilson",
-        email: "mike@company.com",
-        password: hashedPassword,
-        role: "employee",
-        employeeId: "EMP004",
-        department: "Design",
-        createdAt: new Date("2024-02-15"),
-      },
-      {
-        id: randomUUID(),
-        name: "Emily Brown",
-        email: "emily@company.com",
-        password: hashedPassword,
-        role: "employee",
-        employeeId: "EMP005",
-        department: "Marketing",
-        createdAt: new Date("2024-03-01"),
-      },
-      {
-        id: randomUUID(),
-        name: "David Lee",
-        email: "david@company.com",
-        password: hashedPassword,
-        role: "employee",
-        employeeId: "EMP006",
-        department: "Sales",
-        createdAt: new Date("2024-03-15"),
-      },
-    ];
-
-    employees.forEach(emp => this.users.set(emp.id, emp));
-
-    const allEmployees = [manager, ...employees];
-    const today = new Date();
-    
-    for (let i = 0; i < 30; i++) {
-      const date = subDays(today, i);
-      const dateStr = format(date, "yyyy-MM-dd");
-      
-      if (date.getDay() === 0 || date.getDay() === 6) continue;
-
-      allEmployees.forEach(emp => {
-        if (i === 0 && Math.random() > 0.7) return;
-
-        const rand = Math.random();
-        let status: AttendanceStatus;
-        let checkInHour = 8 + Math.floor(Math.random() * 2);
-        let checkInMinute = Math.floor(Math.random() * 60);
-        let totalHours = 8;
-
-        if (rand < 0.7) {
-          status = "present";
-          checkInHour = 8;
-          checkInMinute = Math.floor(Math.random() * 45);
-        } else if (rand < 0.85) {
-          status = "late";
-          checkInHour = 9 + Math.floor(Math.random() * 2);
-          checkInMinute = Math.floor(Math.random() * 30);
-        } else if (rand < 0.95) {
-          status = "half-day";
-          totalHours = 4;
-        } else {
-          status = "absent";
-          totalHours = 0;
-        }
-
-        const checkInTime = status !== "absent" 
-          ? new Date(date.getFullYear(), date.getMonth(), date.getDate(), checkInHour, checkInMinute)
-          : null;
-        
-        const checkOutTime = (status !== "absent" && (i > 0 || Math.random() > 0.5))
-          ? new Date(date.getFullYear(), date.getMonth(), date.getDate(), checkInHour + totalHours, checkInMinute)
-          : null;
-
-        const attendance: Attendance = {
-          id: randomUUID(),
-          userId: emp.id,
-          date: dateStr,
-          checkInTime: checkInTime,
-          checkOutTime: checkOutTime,
-          status,
-          totalHours: checkOutTime ? totalHours : 0,
-          createdAt: date,
-        };
-
-        this.attendance.set(attendance.id, attendance);
-      });
-    }
+    // Connection logic will be in index.ts
   }
 
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    const user = await UserModel.findOne({ id });
+    return user?.toObject();
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.email.toLowerCase() === email.toLowerCase()
-    );
+    const user = await UserModel.findOne({ email });
+    return user?.toObject();
   }
 
   async getUserByEmployeeId(employeeId: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.employeeId === employeeId
-    );
+    const user = await UserModel.findOne({ employeeId });
+    return user?.toObject();
   }
 
   async getAllUsers(): Promise<User[]> {
-    return Array.from(this.users.values());
+    const users = await UserModel.find();
+    return users.map(u => u.toObject());
   }
 
   async getEmployees(): Promise<User[]> {
-    return Array.from(this.users.values()).filter(u => u.role === "employee");
+    const users = await UserModel.find({ role: "employee" });
+    return users.map(u => u.toObject());
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
     let employeeId = insertUser.employeeId;
-    
+
     if (!employeeId) {
       do {
         employeeId = generateEmployeeId();
       } while (await this.getUserByEmployeeId(employeeId));
     }
 
-    const user: User = { 
-      id, 
-      name: insertUser.name,
-      email: insertUser.email,
-      password: insertUser.password,
+    const user = new UserModel({
+      id,
+      ...insertUser,
       role: insertUser.role || "employee",
       employeeId,
-      department: insertUser.department,
-      createdAt: new Date() 
-    };
-    this.users.set(id, user);
-    return user;
+      createdAt: new Date(),
+    });
+
+    await user.save();
+    return user.toObject();
   }
 
   async getAttendance(id: string): Promise<Attendance | undefined> {
-    return this.attendance.get(id);
+    const attendance = await AttendanceModel.findOne({ id });
+    return attendance?.toObject();
   }
 
   async getAttendanceByUserAndDate(userId: string, date: string): Promise<Attendance | undefined> {
-    return Array.from(this.attendance.values()).find(
-      (a) => a.userId === userId && a.date === date
-    );
+    const attendance = await AttendanceModel.findOne({ userId, date });
+    return attendance?.toObject();
   }
 
   async getAttendanceByUser(userId: string): Promise<Attendance[]> {
-    return Array.from(this.attendance.values())
-      .filter((a) => a.userId === userId)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const attendance = await AttendanceModel.find({ userId }).sort({ date: -1 });
+    return attendance.map(a => a.toObject());
   }
 
   async getAllAttendance(): Promise<AttendanceWithUser[]> {
-    const attendanceList = Array.from(this.attendance.values())
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    
-    return Promise.all(
-      attendanceList.map(async (a) => ({
-        ...a,
-        user: await this.getUser(a.userId),
-      }))
-    );
+    const attendance = await AttendanceModel.find().sort({ date: -1 });
+
+    // Manual join since we are using string IDs not ObjectId for references in this schema design
+    // to keep compatibility with existing frontend/types
+    const result: AttendanceWithUser[] = [];
+    for (const a of attendance) {
+      const user = await this.getUser(a.userId);
+      if (user) {
+        result.push({ ...a.toObject(), user });
+      }
+    }
+    return result;
   }
 
   async getAttendanceByDateRange(from: Date, to: Date, userId?: string): Promise<AttendanceWithUser[]> {
     const fromStr = format(from, "yyyy-MM-dd");
     const toStr = format(to, "yyyy-MM-dd");
-    
-    const attendanceList = Array.from(this.attendance.values())
-      .filter((a) => {
-        const matchesDate = a.date >= fromStr && a.date <= toStr;
-        const matchesUser = !userId || a.userId === userId;
-        return matchesDate && matchesUser;
-      })
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    
-    return Promise.all(
-      attendanceList.map(async (a) => ({
-        ...a,
-        user: await this.getUser(a.userId),
-      }))
-    );
+
+    const query: any = {
+      date: { $gte: fromStr, $lte: toStr }
+    };
+
+    if (userId) {
+      query.userId = userId;
+    }
+
+    const attendance = await AttendanceModel.find(query).sort({ date: -1 });
+
+    const result: AttendanceWithUser[] = [];
+    for (const a of attendance) {
+      const user = await this.getUser(a.userId);
+      if (user) {
+        result.push({ ...a.toObject(), user });
+      }
+    }
+    return result;
   }
 
   async createAttendance(insertAttendance: InsertAttendance): Promise<Attendance> {
     const id = randomUUID();
-    const attendance: Attendance = {
+    const attendance = new AttendanceModel({
       id,
-      userId: insertAttendance.userId,
-      date: insertAttendance.date,
+      ...insertAttendance,
       checkInTime: insertAttendance.checkInTime || null,
       checkOutTime: insertAttendance.checkOutTime || null,
       status: insertAttendance.status || "present",
       totalHours: insertAttendance.totalHours || 0,
       createdAt: new Date(),
-    };
-    this.attendance.set(id, attendance);
-    return attendance;
+    });
+
+    await attendance.save();
+    return attendance.toObject();
   }
 
   async updateAttendance(id: string, updates: Partial<Attendance>): Promise<Attendance | undefined> {
-    const existing = this.attendance.get(id);
-    if (!existing) return undefined;
-
-    const updated = { ...existing, ...updates };
-    this.attendance.set(id, updated);
-    return updated;
+    const attendance = await AttendanceModel.findOneAndUpdate(
+      { id },
+      { $set: updates },
+      { new: true }
+    );
+    return attendance?.toObject();
   }
 
   async getTodayAttendance(): Promise<AttendanceWithUser[]> {
     const today = format(new Date(), "yyyy-MM-dd");
-    const todayAttendance = Array.from(this.attendance.values())
-      .filter((a) => a.date === today);
-    
-    return Promise.all(
-      todayAttendance.map(async (a) => ({
-        ...a,
-        user: await this.getUser(a.userId),
-      }))
-    );
+    const attendance = await AttendanceModel.find({ date: today });
+
+    const result: AttendanceWithUser[] = [];
+    for (const a of attendance) {
+      const user = await this.getUser(a.userId);
+      if (user) {
+        result.push({ ...a.toObject(), user });
+      }
+    }
+    return result;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new MongoStorage();
