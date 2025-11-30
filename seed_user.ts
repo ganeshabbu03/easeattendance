@@ -59,6 +59,36 @@ const User = mongoose.model("User", userSchema);
             console.log("Employee user already exists");
         }
 
+        // Seed 100 random employees
+        console.log("Seeding 100 random employees...");
+        const departments = ["Engineering", "Human Resources", "Sales", "Marketing", "Finance", "Operations"];
+        const employeesToInsert = [];
+
+        for (let i = 1; i <= 100; i++) {
+            const email = `employee${i}@company.com`;
+            const existing = await User.findOne({ email });
+
+            if (!existing) {
+                employeesToInsert.push({
+                    id: randomUUID(),
+                    name: `Employee ${i}`,
+                    email: email,
+                    password: hashedPassword,
+                    role: "employee",
+                    employeeId: `EMP${2000 + i}`,
+                    department: departments[Math.floor(Math.random() * departments.length)],
+                    createdAt: new Date(),
+                });
+            }
+        }
+
+        if (employeesToInsert.length > 0) {
+            await User.insertMany(employeesToInsert);
+            console.log(`Successfully seeded ${employeesToInsert.length} new employees.`);
+        } else {
+            console.log("All 100 sample employees already exist.");
+        }
+
     } catch (err) {
         console.error(err);
     } finally {

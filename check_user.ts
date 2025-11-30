@@ -9,12 +9,8 @@ const User = mongoose.model("User", userSchema);
 (async () => {
     try {
         await mongoose.connect("mongodb://localhost:27017/animated-attendance");
-        const user = await User.findOne({ email: "john@company.com" });
-        if (user) {
-            console.log("User found:", user);
-        } else {
-            console.log("User not found");
-        }
+        const count = await User.countDocuments();
+        console.log(`Total users in database: ${count}`);
     } catch (err) {
         console.error(err);
     } finally {
