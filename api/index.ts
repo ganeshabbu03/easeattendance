@@ -1,4 +1,4 @@
-import { app, setupApp } from "../server/app";
+import { app, setupApp } from "../server/app.js";
 import mongoose from "mongoose";
 
 let isReady = false;
