@@ -28,6 +28,8 @@ export const attendance = pgTable("attendance", {
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
+}).extend({
+  employeeId: z.string().optional(),
 });
 
 export const registerSchema = insertUserSchema.omit({ employeeId: true }).extend({
