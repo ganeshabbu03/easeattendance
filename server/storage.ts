@@ -1,6 +1,7 @@
 import { type User, type InsertUser, type Attendance, type InsertAttendance, type AttendanceWithUser, type AttendanceStatus } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { format, startOfMonth, endOfMonth, subDays } from "date-fns";
+import bcrypt from "bcrypt";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -33,17 +34,22 @@ export class MemStorage implements IStorage {
   constructor() {
     this.users = new Map();
     this.attendance = new Map();
-    this.seedData();
+    this.initializeAsync();
   }
 
-  private seedData() {
+  private async initializeAsync() {
+    await this.seedData();
+  }
+
+  private async seedData() {
+    const hashedPassword = await bcrypt.hash("password123", 10);
     const departments = ["Engineering", "Product", "Design", "Marketing", "Sales", "Human Resources"];
     
     const manager: User = {
       id: randomUUID(),
       name: "Sarah Johnson",
       email: "sarah@company.com",
-      password: "$2b$10$qMTxkL3xGBT9Rq6rz6YjdOJhqjHpRqLQQQ5TvJ0pJ1E0PfDHnLCJy",
+      password: hashedPassword,
       role: "manager",
       employeeId: "EMP001",
       department: "Human Resources",
@@ -56,7 +62,7 @@ export class MemStorage implements IStorage {
         id: randomUUID(),
         name: "John Doe",
         email: "john@company.com",
-        password: "$2b$10$qMTxkL3xGBT9Rq6rz6YjdOJhqjHpRqLQQQ5TvJ0pJ1E0PfDHnLCJy",
+        password: hashedPassword,
         role: "employee",
         employeeId: "EMP002",
         department: "Engineering",
@@ -66,7 +72,7 @@ export class MemStorage implements IStorage {
         id: randomUUID(),
         name: "Jane Smith",
         email: "jane@company.com",
-        password: "$2b$10$qMTxkL3xGBT9Rq6rz6YjdOJhqjHpRqLQQQ5TvJ0pJ1E0PfDHnLCJy",
+        password: hashedPassword,
         role: "employee",
         employeeId: "EMP003",
         department: "Product",
@@ -76,7 +82,7 @@ export class MemStorage implements IStorage {
         id: randomUUID(),
         name: "Mike Wilson",
         email: "mike@company.com",
-        password: "$2b$10$qMTxkL3xGBT9Rq6rz6YjdOJhqjHpRqLQQQ5TvJ0pJ1E0PfDHnLCJy",
+        password: hashedPassword,
         role: "employee",
         employeeId: "EMP004",
         department: "Design",
@@ -86,7 +92,7 @@ export class MemStorage implements IStorage {
         id: randomUUID(),
         name: "Emily Brown",
         email: "emily@company.com",
-        password: "$2b$10$qMTxkL3xGBT9Rq6rz6YjdOJhqjHpRqLQQQ5TvJ0pJ1E0PfDHnLCJy",
+        password: hashedPassword,
         role: "employee",
         employeeId: "EMP005",
         department: "Marketing",
@@ -96,7 +102,7 @@ export class MemStorage implements IStorage {
         id: randomUUID(),
         name: "David Lee",
         email: "david@company.com",
-        password: "$2b$10$qMTxkL3xGBT9Rq6rz6YjdOJhqjHpRqLQQQ5TvJ0pJ1E0PfDHnLCJy",
+        password: hashedPassword,
         role: "employee",
         employeeId: "EMP006",
         department: "Sales",
@@ -199,9 +205,13 @@ export class MemStorage implements IStorage {
     }
 
     const user: User = { 
-      ...insertUser, 
       id, 
+      name: insertUser.name,
+      email: insertUser.email,
+      password: insertUser.password,
+      role: insertUser.role || "employee",
       employeeId,
+      department: insertUser.department,
       createdAt: new Date() 
     };
     this.users.set(id, user);
@@ -259,8 +269,13 @@ export class MemStorage implements IStorage {
   async createAttendance(insertAttendance: InsertAttendance): Promise<Attendance> {
     const id = randomUUID();
     const attendance: Attendance = {
-      ...insertAttendance,
       id,
+      userId: insertAttendance.userId,
+      date: insertAttendance.date,
+      checkInTime: insertAttendance.checkInTime || null,
+      checkOutTime: insertAttendance.checkOutTime || null,
+      status: insertAttendance.status || "present",
+      totalHours: insertAttendance.totalHours || 0,
       createdAt: new Date(),
     };
     this.attendance.set(id, attendance);
